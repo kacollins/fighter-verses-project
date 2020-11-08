@@ -2,16 +2,17 @@ from bs4 import BeautifulSoup
 import urllib
 from urllib.request import Request, urlopen
 import json
-import tkinter
+from tkinter import *
 from tkinter import ttk
 from io import BytesIO
 from PIL import Image, ImageTk
+import re
 import os
 os.add_dll_directory(r"C:\Program Files (x86)\VideoLAN\VLC")
 import vlc
 
 song_url = ""
-image_url = ""
+medium_image_url = ""
 
 def get_soup(site):
     hdr = {'User-Agent': 'Mozilla/5.0'}
@@ -45,24 +46,49 @@ def get_image_url():
     image_div = soup.find("div", "background")    
     return image_div.attrs['data-url']
 
+def update_image_url(width):
+    image_url = medium_image_url
+    m = re.match("http://s3.amazonaws.com/versesproject/verses/\d*/(\d*)", medium_image_url)
+    number = int(m.group(1))
+
+    if width > 1280:
+        image_url = medium_image_url
+    elif width > 1000:
+        image_url = medium_image_url.replace('_medium', '_small')
+    elif width > 680:
+        image_url = medium_image_url.replace(str(number), str(number + 1)).replace('_desktop_medium', '_ipad_original')
+    else:
+        image_url = medium_image_url.replace(str(number), str(number + 2)).replace('_desktop_medium', '_iphone_original')
+
+    print(width, image_url)
+    return image_url
+    
 def play_mp3():
     p = vlc.MediaPlayer(song_url)
     p.play()
 
-def show_image():
+def show_image(image_url, width, height):
     u = urllib.request.urlopen(image_url)
     raw_data = u.read()
     u.close()
 
     image_data = Image.open(BytesIO(raw_data))
-    image = ImageTk.PhotoImage(image_data)
+    resized = image_data.resize((width, height))
+    root.image = ImageTk.PhotoImage(resized)
 
-    label = tkinter.Label(image=image)
-    label.pack()
-    root.mainloop()
+    label.configure(image=root.image)
 
-root = tkinter.Tk()
+def resize_image(event):
+    image_url = update_image_url(event.width)
+    show_image(image_url, event.width, event.height)
+
+root = Tk()
 root.state('zoomed')
+root.bind('<Configure>', resize_image)
+
+image = PhotoImage(file = 'verses-bg.png')
+label = Label(image=image)
+label.pack(fill=BOTH, expand=YES)
 
 site = get_verse_url()
 soup = get_soup(site)
@@ -74,5 +100,8 @@ button = ttk.Button(root, text='Play Again')
 button.pack()
 button.config(command=play_mp3)
 
-image_url = get_image_url()
-show_image()
+medium_image_url = get_image_url()
+show_image(medium_image_url, 1025, 577)
+
+root.mainloop()
+
