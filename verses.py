@@ -12,9 +12,9 @@ os.add_dll_directory(r"C:\Program Files (x86)\VideoLAN\VLC")
 import vlc
 
 song_url = ""
-medium_image_url = ""
 
 def get_soup(site):
+    print("url", site)
     hdr = {'User-Agent': 'Mozilla/5.0'}
     req = Request(site, headers=hdr)
     page = urlopen(req)
@@ -43,44 +43,64 @@ def get_song_url():
     return song_data['mp3']
 
 def get_image_url():
-    image_div = soup.find("div", "background")    
+    image_div = soup.find("div", "background")
     return image_div.attrs['data-url']
 
-def update_image_url(width):
-    image_url = medium_image_url
-    m = re.match("http://s3.amazonaws.com/versesproject/verses/\d*/(\d*)", medium_image_url)
-    number = int(m.group(1))
+def get_images():
+    image_div = soup.find("div", "wallpaper")
+    desktop_button = image_div.find("button", "desktop")
 
-    if width > 1280:
-        image_url = medium_image_url
-    elif width > 1000:
-        image_url = medium_image_url.replace('_medium', '_small')
-    elif width > 680:
-        image_url = medium_image_url.replace(str(number), str(number + 1)).replace('_desktop_medium', '_ipad_original')
-    else:
-        image_url = medium_image_url.replace(str(number), str(number + 2)).replace('_desktop_medium', '_iphone_original')
+    iphone_url = image_div.find("a", "iphone")['href']
+    print("iphone", iphone_url)
+    root.iphone_image = get_image(iphone_url)
 
-    print(width, image_url)
-    return image_url
-    
-def play_mp3():
-    p = vlc.MediaPlayer(song_url)
-    p.play()
+    ipad_url = image_div.find("a", "ipad")['href']
+    print("ipad", ipad_url)
+    root.ipad_image = get_image(ipad_url)
 
-def show_image(image_url, width, height):
+    small_url = desktop_button.find_all("a")[0]['href']
+    print("small", small_url)
+    root.small_image = get_image(small_url)
+
+    medium_url = desktop_button.find_all("a")[1]['href']
+    print("medium", medium_url)
+    root.medium_image = get_image(medium_url)
+
+    large_url = desktop_button.find_all("a")[1]['href']
+    print("large", large_url)
+    root.large_image = get_image(large_url)
+
+def get_image(image_url):
     u = urllib.request.urlopen(image_url)
     raw_data = u.read()
     u.close()
 
     image_data = Image.open(BytesIO(raw_data))
-    resized = image_data.resize((width, height))
-    root.image = ImageTk.PhotoImage(resized)
-
-    label.configure(image=root.image)
+    return ImageTk.PhotoImage(image_data)
+    
+def play_mp3():
+    p = vlc.MediaPlayer(song_url)
+    p.play()
 
 def resize_image(event):
-    image_url = update_image_url(event.width)
-    show_image(image_url, event.width, event.height)
+    show_image(event.width, event.height)
+
+def show_image(width, height):
+    if width >= 2100:
+        label.configure(image=root.large_image)
+        print(width, "large")
+    elif width >= 1600:
+        label.configure(image=root.medium_image)
+        print(width, "medium")
+    elif width >= 1000:
+        label.configure(image=root.small_image)
+        print(width, "small")
+    elif width >= 680:
+        label.configure(image=root.ipad_image)
+        print(width, "ipad")
+    else:
+        label.configure(image=root.iphone_image)
+        print(width, "iphone")
 
 root = Tk()
 root.state('zoomed')
@@ -100,8 +120,8 @@ button = ttk.Button(root, text='Play Again')
 button.pack()
 button.config(command=play_mp3)
 
-medium_image_url = get_image_url()
-show_image(medium_image_url, 1025, 577)
+get_images()
+show_image(root.winfo_width(), root.winfo_height())
 
 root.mainloop()
 
