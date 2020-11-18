@@ -28,6 +28,7 @@ def get_search_url():
     title = soup.title.string
     title = title.replace('Fighter Verses - ', '')
     title = title.replace('\r\n\t', '')
+    info.config(text = info['text'] + '\n' + title)
     url = "http://theversesproject.com/search?q=" + urllib.parse.quote(title)
     return url
 
@@ -120,8 +121,8 @@ def show_image(width, height):
         if new_width > width:
             new_width = width
 
-        print("window", width, height, size)
-        print("resize", new_width, new_height)
+        # print("window", width, height, size)
+        # print("resize", new_width, new_height)
 
         if new_width >= 20 and new_height >= 20:
             resized = image_data.resize((new_width, new_height))
@@ -133,16 +134,30 @@ root = Tk()
 root.state('zoomed')
 root.bind('<Configure>', resize_image)
 
+info = ttk.Label(root, text = "Fighter Verses/Verses Project")
+info.grid(row = 0, column = 0, padx = 10)
+
 button = ttk.Button(root, text='Play Again')
-button.pack()
+button.grid(row = 0, column = 1)
 button.config(command=play_mp3)
 
-image = PhotoImage(file = 'verses-bg.png')
-label = Label(image=image, width = root.winfo_width(), height = root.winfo_height())
-label.pack(fill=BOTH, expand=YES)
+label = Label(width = root.winfo_width(), height = root.winfo_height())
+label.grid(row = 1, column = 0, columnspan=3, sticky='nesw')
+
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+root.grid_columnconfigure(2, weight=1)
+root.grid_rowconfigure(1, weight=1)
 
 site = get_verse_url()
 soup = get_soup(site)
+
+song_by = soup.find("div", "song-title").find("a").get_text()
+artwork_by = soup.find("div", "author").find("a").get_text()
+
+credits_text = f"Song - {song_by}\nArtwork - {artwork_by}"
+credits = ttk.Label(root, text = credits_text)
+credits.grid(row = 0, column = 2, padx = 10)
 
 song_url = get_song_url()
 play_mp3() 
