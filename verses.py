@@ -22,20 +22,33 @@ def get_soup(site):
     soup = BeautifulSoup(page, 'html.parser')
     return soup
 
-def get_search_url():
+def get_verse_reference():
     site = "https://fighterverses.com/"
     soup = get_soup(site)
-    title = soup.title.string
-    title = title.replace('Fighter Verses - ', '')
-    title = title.replace('\r\n\t', '')
-    info.config(text = info['text'] + '\n' + title)
-    url = "http://theversesproject.com/search?q=" + urllib.parse.quote(title)
+    reference = soup.title.string
+    reference = reference.replace('Fighter Verses - ', '')
+    reference = reference.replace('\r\n\t', '')
+    return reference
+
+def get_search_url(reference):
+    info.config(text = reference)
+    url = "http://theversesproject.com/search?q=" + urllib.parse.quote(reference)
     return url
 
-def get_verse_url():
-    site = get_search_url()
+def get_verse_div(reference):
+    site = get_search_url(reference)
     soup = get_soup(site)
     verse_div = soup.find("div", "verse")
+    return verse_div
+
+def get_verse_url():
+    reference = get_verse_reference()
+    verse_div = get_verse_div(reference)
+
+    if verse_div is None and '-' in reference:
+        reference = reference[0: reference.index('-')]
+        verse_div = get_verse_div(reference)
+
     song_data = json.loads(verse_div.find("button").attrs['data-songs'])[0]
     return "http://theversesproject.com" + song_data['verse_url']
 
